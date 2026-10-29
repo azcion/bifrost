@@ -1,5 +1,6 @@
 import { SequelizeAccountLinkRepository } from './db/sequelizerepos/SequelizeAccountLinkRepository';
 import { AccountLinkService } from './services/AccountLinkService';
+import { UserMentionService } from './services/userMentions';
 import { CachedChannelLinkRepository } from './db/cachedrepos/CachedChannelLinkRepository';
 import { CachedGuildLinkRepository } from './db/cachedrepos/CachedGuildLinkRepository';
 import { CachedMessageLinkRepository } from './db/cachedrepos/CachedMessageLinkRepository';
@@ -84,7 +85,12 @@ const main = async () => {
     const accountLinkService = new AccountLinkService(
         new SequelizeAccountLinkRepository()
     );
-    const webhookService = new WebhookService();
+    const userMentionService = new UserMentionService(
+        accountLinkService,
+        cachedGuildLinkRepo,
+        cachedChannelLinkRepo
+    );
+    const webhookService = new WebhookService(userMentionService);
     const discordEntityResolver = new DiscordEntityResolver();
     const fluxerEntityResolver = new FluxerEntityResolver();
     const discordStatsService = new DiscordStatsService();

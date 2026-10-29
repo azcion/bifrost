@@ -13,6 +13,7 @@ import type {
     GuildsResponse,
     InviteLinkResponse,
     MeResponse,
+    UserMentionSettings,
 } from '../../../src/web/types';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -183,6 +184,35 @@ export function useInviteLink() {
             apiFetch<InviteLinkResponse>(
                 `/invite-link?platform=${platform}&guildId=${guildId}`
             ),
+    });
+}
+
+export function useUserMentionSettings(guildLinkId: string | undefined) {
+    return useQuery({
+        queryKey: ['user-mentions', guildLinkId],
+        queryFn: () =>
+            apiFetch<UserMentionSettings>(
+                `/guild-links/${guildLinkId}/mentions`
+            ),
+        enabled: !!guildLinkId,
+    });
+}
+
+export function useSetUserMentions(guildLinkId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (body: {
+            platform: 'discord' | 'fluxer';
+            enabled: boolean;
+        }) =>
+            apiFetch<void>(`/guild-links/${guildLinkId}/mentions`, {
+                method: 'PATCH',
+                body: JSON.stringify(body),
+            }),
+        onSuccess: () =>
+            queryClient.invalidateQueries({
+                queryKey: ['user-mentions', guildLinkId],
+            }),
     });
 }
 

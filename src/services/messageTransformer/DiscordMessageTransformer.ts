@@ -1,3 +1,4 @@
+import { captureUserMention, UserMentionContext } from '../userMentions';
 import {
     Message,
     MessageFlags,
@@ -66,12 +67,14 @@ export default class DiscordMessageTransformer extends MessageTransformer<
     }
 
     private sanitizeContent(
-        message: Pick<DiscordMessage, 'content' | 'client' | 'guild'>
+        message: Pick<DiscordMessage, 'content' | 'client' | 'guild'>,
+        mentions?: UserMentionContext
     ): string {
         return sanitizeMentions(message.content, {
             resolveUser: (id) => {
                 const user = message.client.users.cache.get(id);
-                return user ? user.username : null;
+                const name = user ? user.username : null;
+                return mentions ? captureUserMention(mentions, id, name) : name;
             },
             resolveRole: (id) => {
                 if (!message.guild) return null;
@@ -115,7 +118,12 @@ export default class DiscordMessageTransformer extends MessageTransformer<
         message: DiscordMessage,
         fluxerEmojis: GeneralEmoji[] = []
     ): Promise<WebhookMessageData> {
-        const sanitizedContent = this.sanitizeContent(message);
+        const userMentions: UserMentionContext = {
+            platform: 'discord',
+            channelId: message.channelId,
+            users: [],
+        };
+        const sanitizedContent = this.sanitizeContent(message, userMentions);
         const emojiReplacedContent = this.replaceEmojis(
             sanitizedContent,
             fluxerEmojis
@@ -149,6 +157,7 @@ export default class DiscordMessageTransformer extends MessageTransformer<
             if (!referencedMessage) {
                 return {
                     content: messageContent,
+                    userMentions,
                     username: message.author.username,
                     avatarURL: message.author.avatarURL() || '',
                     attachments: attachments,
@@ -194,6 +203,7 @@ export default class DiscordMessageTransformer extends MessageTransformer<
 
         return {
             content: messageContent,
+            userMentions,
             username: message.author.username,
             avatarURL: message.author.avatarURL() || '',
             attachments: attachments,

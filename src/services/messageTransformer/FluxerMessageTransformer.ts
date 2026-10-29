@@ -1,3 +1,4 @@
+import { captureUserMention, UserMentionContext } from '../userMentions';
 import { Message, MessageAttachmentFlags } from '@fluxerjs/core';
 import MessageTransformer from './MessageTransformer';
 import { WebhookMessageData } from '../WebhookService';
@@ -10,12 +11,18 @@ export default class FluxerMessageTransformer extends MessageTransformer<
     Message,
     WebhookMessageData
 > {
-    private sanitizeContent(message: Message): string {
+    private sanitizeContent(
+        message: Message,
+        mentions?: UserMentionContext
+    ): string {
         return breakMentions(
             sanitizeMentions(message.content, {
                 resolveUser: (id) => {
                     const user = message.client.users.get(id);
-                    return user ? user.username : null;
+                    const name = user ? user.username : null;
+                    return mentions
+                        ? captureUserMention(mentions, id, name)
+                        : name;
                 },
                 resolveRole: (id) => {
                     if (!message.guild) return null;
@@ -34,7 +41,12 @@ export default class FluxerMessageTransformer extends MessageTransformer<
         message: Message,
         discordEmojis: GeneralEmoji[] = []
     ): Promise<WebhookMessageData> {
-        const sanitizedContent = this.sanitizeContent(message);
+        const userMentions: UserMentionContext = {
+            platform: 'fluxer',
+            channelId: message.channelId,
+            users: [],
+        };
+        const sanitizedContent = this.sanitizeContent(message, userMentions);
         const emojiReplacedContent = this.replaceEmojis(
             sanitizedContent,
             discordEmojis
@@ -93,6 +105,7 @@ export default class FluxerMessageTransformer extends MessageTransformer<
 
         return {
             content: emojiReplacedContent,
+            userMentions,
             username: message.author.username,
             avatarURL: message.author.avatarURL() || '',
             attachments: attachments,

@@ -3,6 +3,7 @@ import {
     TextChannel as FluxerTextChannel,
     Webhook as FluxerWebhook,
     MessageAttachmentFlags,
+    GuildChannel as FluxerGuildChannel,
     Routes as FluxerRoutes,
 } from '@fluxerjs/core';
 import {
@@ -10,9 +11,19 @@ import {
     Client as DiscordClient,
     TextChannel as DiscordTextChannel,
     WebhookClient,
+    PermissionFlagsBits,
+    Routes as DiscordRoutes,
+    type RESTGetAPIGuildMemberResult,
 } from 'discord.js';
 import logger from '../utils/logging/logger';
 import WebhookEmbed from './WebhookEmbed';
+
+import { PermissionFlags as FluxerPermissionFlags } from '@fluxerjs/util';
+import {
+    UserMentionContext,
+    UserMentionService,
+    MentionPlatform,
+} from './userMentions';
 
 type DiscordWebhook = WebhookClient;
 
@@ -23,6 +34,7 @@ export type WebhookAttachment = {
 };
 
 export type WebhookMessageData = {
+    userMentions?: UserMentionContext;
     content: string;
     username: string;
     avatarURL: string;
@@ -31,6 +43,125 @@ export type WebhookMessageData = {
 };
 
 export class WebhookService {
+    constructor(private readonly userMentions: UserMentionService) {}
+
+    private async prepareMentions(
+        data: WebhookMessageData,
+        destination: MentionPlatform,
+        allowPings = true
+    ) {
+        const lookups = new Map<string, Promise<unknown>>();
+        const lookup = <T>(
+            key: string,
+            fetch: () => Promise<T>
+        ): Promise<T> => {
+            if (!lookups.has(key)) lookups.set(key, fetch());
+            return lookups.get(key) as Promise<T>;
+        };
+        return this.userMentions.resolve(
+            data.content,
+            data.userMentions,
+            destination,
+            (guildId, channelId, userId) =>
+                this.hasChannelAccess(
+                    destination,
+                    guildId,
+                    channelId,
+                    userId,
+                    lookup
+                ),
+            allowPings
+        );
+    }
+
+    private async hasChannelAccess(
+        platform: MentionPlatform,
+        guildId: string,
+        channelId: string,
+        userId: string,
+        lookup: <T>(key: string, fetch: () => Promise<T>) => Promise<T>
+    ): Promise<boolean> {
+        try {
+            if (platform === 'discord') {
+                const guild = await lookup(`discord:guild:${guildId}`, () =>
+                    this.discordClient!.guilds.fetch({
+                        guild: guildId,
+                        force: true,
+                    })
+                );
+                if (!guild?.ownerId) return false;
+                const roles = await lookup(`discord:roles:${guildId}`, () =>
+                    guild.roles.fetch()
+                );
+                const member = await lookup(
+                    `discord:member:${guildId}:${userId}`,
+                    () => guild.members.fetch({ user: userId, force: true })
+                );
+                const channel = await lookup(
+                    `discord:channel:${guildId}:${channelId}`,
+                    () => guild.channels.fetch(channelId, { force: true })
+                );
+                // The SDK role cache can retain deleted roles, so compare it with
+                // the current REST member and role lists before calculating permissions.
+                const currentMember = (await lookup(
+                    `discord:rest-member:${guildId}:${userId}`,
+                    () =>
+                        this.discordClient!.rest.get(
+                            DiscordRoutes.guildMember(guildId, userId)
+                        )
+                )) as RESTGetAPIGuildMemberResult | undefined;
+                const roleIds = currentMember?.roles;
+                const cachedRoles = member?.roles.cache;
+                if (
+                    !member ||
+                    !Array.isArray(roleIds) ||
+                    !cachedRoles ||
+                    !roles.has(guildId) ||
+                    roleIds.some(
+                        (id) => !roles.has(id) || !cachedRoles.has(id)
+                    ) ||
+                    [...cachedRoles.keys()].some(
+                        (id) => id !== guildId && !roleIds.includes(id)
+                    )
+                )
+                    return false;
+                const permissions = channel?.permissionsFor(member);
+                return !!permissions?.has(PermissionFlagsBits.ViewChannel);
+            }
+            const guild = await lookup(`fluxer:guild:${guildId}`, () =>
+                this.fluxerClient!.guilds.fetch(guildId, { force: true })
+            );
+            if (!guild?.ownerId) return false;
+            const roles = await lookup(`fluxer:roles:${guildId}`, () =>
+                guild.fetchRoles()
+            );
+            const member = await lookup(
+                `fluxer:member:${guildId}:${userId}`,
+                () => guild.fetchMember(userId)
+            );
+            const channel = await lookup(`fluxer:channel:${channelId}`, () =>
+                this.fluxerClient!.channels.fetch(channelId, { force: true })
+            );
+            if (
+                !member ||
+                !(channel instanceof FluxerGuildChannel) ||
+                channel.guildId !== guildId
+            )
+                return false;
+            const roleIds = new Set(roles.map((role) => role.id));
+            if (
+                !roleIds.has(guildId) ||
+                [...member.roles.roleIds].some((id) => !roleIds.has(id))
+            )
+                return false;
+            const permissions = member.permissionsIn(channel);
+            return permissions.has(FluxerPermissionFlags.ViewChannel);
+        } catch {
+            // Missing members and unavailable permissions must not enable notifications.
+            return false;
+        }
+    }
+
     private discordClient: DiscordClient | null = null;
     private fluxerClient: FluxerClient | null = null;
 
@@ -94,6 +225,7 @@ export class WebhookService {
         data: WebhookMessageData
     ): Promise<{ messageId: string }> {
         try {
+            const mentions = await this.prepareMentions(data, 'discord', true);
             const files = data.attachments?.map((att) => {
                 const attBuilder = new AttachmentBuilder(att.url, {
                     name: att.name,
@@ -103,7 +235,12 @@ export class WebhookService {
             });
 
             const { id } = await webhook.send({
-                content: data.content,
+                content: mentions.content,
+                allowedMentions: {
+                    parse: [],
+                    users: mentions.users,
+                    repliedUser: false,
+                },
                 username: data.username,
                 avatarURL: data.avatarURL,
                 files,
@@ -124,6 +261,7 @@ export class WebhookService {
         data: WebhookMessageData
     ): Promise<void> {
         try {
+            const mentions = await this.prepareMentions(data, 'discord', false);
             const files = data.attachments?.map((att) => {
                 const attBuilder = new AttachmentBuilder(att.url, {
                     name: att.name,
@@ -133,7 +271,12 @@ export class WebhookService {
             });
 
             await webhook.editMessage(messageId, {
-                content: data.content,
+                content: mentions.content,
+                allowedMentions: {
+                    parse: [],
+                    users: mentions.users,
+                    repliedUser: false,
+                },
                 files,
                 embeds:
                     data.embeds?.map((embed) => embed.toDiscordEmbed()) || [],
@@ -225,9 +368,15 @@ export class WebhookService {
         data: WebhookMessageData
     ): Promise<{ messageId: string }> {
         try {
+            const mentions = await this.prepareMentions(data, 'fluxer', true);
             const msg = await webhook.send(
                 {
-                    content: data.content,
+                    content: mentions.content,
+                    allowedMentions: {
+                        parse: [],
+                        users: mentions.users,
+                        repliedUser: false,
+                    },
                     username: data.username,
                     avatarUrl: data.avatarURL || undefined,
                     files:
@@ -271,12 +420,18 @@ export class WebhookService {
         data: WebhookMessageData
     ): Promise<void> {
         try {
+            const mentions = await this.prepareMentions(data, 'fluxer', false);
             const route =
                 FluxerRoutes.webhookExecute(webhook.id, webhook.token!) +
                 `/messages/${messageId}`;
             await webhook.client.rest.patch(route, {
                 body: {
-                    content: data.content,
+                    content: mentions.content,
+                    allowed_mentions: {
+                        parse: [],
+                        users: mentions.users,
+                        replied_user: false,
+                    },
                     attachments:
                         data.attachments?.map((attachment, index) => ({
                             id: index,

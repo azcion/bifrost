@@ -1,3 +1,4 @@
+import { UserMentionSettings } from '../components/UserMentionSettings';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, PackageOpen, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,10 @@ export function GuildDetail() {
             </div>
 
             {guildLinkId && (
-                <AccountPresentationSettings guildLinkId={guildLinkId} />
+                <>
+                    <AccountPresentationSettings guildLinkId={guildLinkId} />
+                    <UserMentionSettings guildLinkId={guildLinkId} />
+                </>
             )}
 
             {isLoading || !data ? (

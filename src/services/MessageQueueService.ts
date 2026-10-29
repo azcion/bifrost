@@ -1,3 +1,4 @@
+import type { UserMentionContext } from './userMentions';
 import { Op } from 'sequelize';
 import { QueuedMessageModel } from '../db/models/QueuedMessageModel';
 import WebhookEmbed from './WebhookEmbed';
@@ -17,6 +18,7 @@ import {
 export type SerializableEmbed = ReturnType<WebhookEmbed['toPlainObject']>;
 
 export type SerializableWebhookMessageData = {
+    userMentions?: UserMentionContext;
     content: string;
     username: string;
     avatarURL: string;

@@ -135,3 +135,8 @@ export interface AccountLinkSummary {
     discord: { username: string; avatarURL: string } | null;
     fluxer: { username: string; avatarURL: string } | null;
 }
+
+export interface UserMentionSettings {
+    discord: { enabled: boolean; canManage: boolean };
+    fluxer: { enabled: boolean; canManage: boolean };
+}

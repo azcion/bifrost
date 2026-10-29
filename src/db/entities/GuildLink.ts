@@ -4,5 +4,7 @@ export interface GuildLink {
     fluxerGuildId: string;
     discordAccountPresentationEnabled: boolean;
     fluxerAccountPresentationEnabled: boolean;
+    discordUserMentions: boolean;
+    fluxerUserMentions: boolean;
     createdAt: Date;
 }

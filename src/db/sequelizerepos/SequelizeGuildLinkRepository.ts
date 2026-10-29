@@ -60,6 +60,17 @@ export class SequelizeGuildLinkRepository implements GuildLinkRepository {
         await GuildLinkModel.update({ [field]: enabled }, { where: { id } });
     }
 
+    async setUserMentions(
+        id: string,
+        platform: 'discord' | 'fluxer',
+        enabled: boolean
+    ): Promise<void> {
+        await GuildLinkModel.update(
+            { [`${platform}UserMentions`]: enabled },
+            { where: { id } }
+        );
+    }
+
     async deleteById(id: string) {
         await GuildLinkModel.destroy({
             where: { id },
