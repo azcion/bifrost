@@ -13,6 +13,8 @@ export interface UserMentionContext {
     platform: MentionPlatform;
     channelId: string;
     users: UserMention[];
+    senderId?: string;
+    mass?: { token: string; tag: 'everyone' | 'here' }[];
 }
 
 export function captureUserMention(
@@ -32,6 +34,21 @@ export function captureUserMention(
     return marker;
 }
 
+export function captureMassMentions(
+    content: string,
+    context: UserMentionContext
+): string {
+    context.mass = [];
+    return content.replace(
+        /@(everyone|here)\b/g,
+        (_match, tag: 'everyone' | 'here') => {
+            const token = randomUUID();
+            context.mass!.push({ token, tag });
+            return token;
+        }
+    );
+}
+
 export class UserMentionService {
     constructor(
         private readonly accounts: AccountLinkService,
@@ -48,12 +65,20 @@ export class UserMentionService {
             channelId: string,
             userId: string
         ) => Promise<boolean>,
-        allowPings = true
-    ): Promise<{ content: string; users: string[] }> {
+        allowPings = true,
+        canMentionEveryone: (
+            platform: MentionPlatform,
+            guildId: string,
+            channelId: string,
+            userId: string
+        ) => Promise<boolean> = async () => false
+    ): Promise<{ content: string; users: string[]; everyone: boolean }> {
         const users: string[] = [];
+        let everyone = false;
+        // Only captured source tokens may enable mass mentions; names and legacy payloads stay inert.
         content = content.replace(/@(everyone|here)\b/g, '@\u200B$1');
-        if (!context || !context.users.length) {
-            return { content, users };
+        if (!context || (!context.users.length && !context.mass?.length)) {
+            return { content, users, everyone };
         }
         const counterparts = new Map<string, Promise<string | null>>();
         const counterpart = (id: string) => {
@@ -95,6 +120,38 @@ export class UserMentionService {
             }
             content = content.split(mention.token).join(replacement);
         }
-        return { content, users };
+        if (context.mass?.length) {
+            if (
+                allowPings &&
+                guild &&
+                channel &&
+                context.platform !== destination &&
+                guild[`${destination}MassMentions`] &&
+                context.senderId &&
+                context.mass.some((mention) => content.includes(mention.token))
+            ) {
+                const senderCounterpart = await counterpart(context.senderId);
+                everyone =
+                    !!senderCounterpart &&
+                    (await canMentionEveryone(
+                        context.platform,
+                        guild[`${context.platform}GuildId`],
+                        channel[`${context.platform}ChannelId`],
+                        context.senderId
+                    )) &&
+                    (await canMentionEveryone(
+                        destination,
+                        guild[`${destination}GuildId`],
+                        channel[`${destination}ChannelId`],
+                        senderCounterpart
+                    ));
+            }
+            for (const mention of context.mass) {
+                content = content
+                    .split(mention.token)
+                    .join('@' + (everyone ? '' : '\u200B') + mention.tag);
+            }
+        }
+        return { content, users, everyone };
     }
 }

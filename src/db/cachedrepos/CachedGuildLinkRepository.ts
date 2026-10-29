@@ -96,12 +96,13 @@ export class CachedGuildLinkRepository implements GuildLinkRepository {
         if (existing) this.primeCache(existing);
     }
 
-    async setUserMentions(
+    async setMentionSetting(
         id: string,
         platform: 'discord' | 'fluxer',
-        enabled: boolean
+        enabled: boolean,
+        kind: 'user' | 'mass' = 'user'
     ): Promise<void> {
-        await this.repository.setUserMentions(id, platform, enabled);
+        await this.repository.setMentionSetting(id, platform, enabled, kind);
         const existing = await this.repository.findById(id);
         if (existing) this.primeCache(existing);
     }

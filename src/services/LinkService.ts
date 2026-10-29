@@ -9,12 +9,13 @@ export class LinkService {
         private messageRepo: MessageLinkRepository
     ) {}
 
-    async setUserMentions(
+    async setMentionSetting(
         id: string,
         platform: 'discord' | 'fluxer',
-        enabled: boolean
+        enabled: boolean,
+        kind: 'user' | 'mass' = 'user'
     ): Promise<void> {
-        await this.guildRepo.setUserMentions(id, platform, enabled);
+        await this.guildRepo.setMentionSetting(id, platform, enabled, kind);
     }
 
     async getGuildLinkById(id: string) {

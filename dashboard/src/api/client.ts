@@ -204,6 +204,7 @@ export function useSetUserMentions(guildLinkId: string | undefined) {
         mutationFn: (body: {
             platform: 'discord' | 'fluxer';
             enabled: boolean;
+            kind: 'user' | 'mass';
         }) =>
             apiFetch<void>(`/guild-links/${guildLinkId}/mentions`, {
                 method: 'PATCH',

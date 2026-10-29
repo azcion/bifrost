@@ -1,4 +1,8 @@
-import { captureUserMention, UserMentionContext } from '../userMentions';
+import {
+    captureMassMentions,
+    captureUserMention,
+    UserMentionContext,
+} from '../userMentions';
 import {
     Message,
     MessageFlags,
@@ -70,26 +74,33 @@ export default class DiscordMessageTransformer extends MessageTransformer<
         message: Pick<DiscordMessage, 'content' | 'client' | 'guild'>,
         mentions?: UserMentionContext
     ): string {
-        return sanitizeMentions(message.content, {
-            resolveUser: (id) => {
-                const user = message.client.users.cache.get(id);
-                const name = user ? user.username : null;
-                return mentions ? captureUserMention(mentions, id, name) : name;
-            },
-            resolveRole: (id) => {
-                if (!message.guild) return null;
-                const role = message.guild.roles.cache.get(id);
-                return role ? role.name : null;
-            },
-            resolveChannel: (id) => {
-                const channel = message.client.channels.cache.get(id);
-                return channel
-                    ? channel instanceof TextChannel
-                        ? channel.name
-                        : channel.id
-                    : null;
-            },
-        });
+        return sanitizeMentions(
+            mentions
+                ? captureMassMentions(message.content, mentions)
+                : message.content,
+            {
+                resolveUser: (id) => {
+                    const user = message.client.users.cache.get(id);
+                    const name = user ? user.username : null;
+                    return mentions
+                        ? captureUserMention(mentions, id, name)
+                        : name;
+                },
+                resolveRole: (id) => {
+                    if (!message.guild) return null;
+                    const role = message.guild.roles.cache.get(id);
+                    return role ? role.name : null;
+                },
+                resolveChannel: (id) => {
+                    const channel = message.client.channels.cache.get(id);
+                    return channel
+                        ? channel instanceof TextChannel
+                            ? channel.name
+                            : channel.id
+                        : null;
+                },
+            }
+        );
     }
 
     private buildForwardSourceFooter(
@@ -121,6 +132,7 @@ export default class DiscordMessageTransformer extends MessageTransformer<
         const userMentions: UserMentionContext = {
             platform: 'discord',
             channelId: message.channelId,
+            senderId: message.author.id,
             users: [],
         };
         const sanitizedContent = this.sanitizeContent(message, userMentions);

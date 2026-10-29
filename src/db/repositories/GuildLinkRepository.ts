@@ -17,10 +17,11 @@ export interface GuildLinkRepository {
         enabled: boolean
     ): Promise<void>;
 
-    setUserMentions(
+    setMentionSetting(
         id: string,
         platform: 'discord' | 'fluxer',
-        enabled: boolean
+        enabled: boolean,
+        kind: 'user' | 'mass'
     ): Promise<void>;
 
     deleteById(id: string): Promise<void>;

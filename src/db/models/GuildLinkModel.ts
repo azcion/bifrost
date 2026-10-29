@@ -29,6 +29,16 @@ GuildLinkModel.init(
             allowNull: false,
             defaultValue: false,
         },
+        discordMassMentions: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
+        fluxerMassMentions: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
         discordGuildId: {
             type: DataTypes.STRING,
             unique: true,

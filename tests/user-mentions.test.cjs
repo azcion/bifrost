@@ -59,6 +59,8 @@ test('migration upgrades existing pairs with independent disabled defaults', asy
             createdAt: new Date(),
         },
     ]);
+    const massMigration = require('../dist/db/migrations/00006-add-mass-mention-settings');
+    await massMigration.up({ context });
     const migration = require('../dist/db/migrations/00005-add-user-mention-settings');
     await migration.up({ context });
     guild = { id: '00000000-0000-4000-8000-000000000001' };
@@ -69,8 +71,8 @@ test('migration upgrades existing pairs with independent disabled defaults', asy
     assert.equal(!!defaults[0].fluxerUserMentions, false);
     await migration.down({ context });
     await migration.up({ context });
-    await guilds.setUserMentions(guild.id, 'discord', true);
-    await guilds.setUserMentions(guild.id, 'discord', false);
+    await guilds.setMentionSetting(guild.id, 'discord', true);
+    await guilds.setMentionSetting(guild.id, 'discord', false);
     channel = await new SequelizeChannelLinkRepository().create({
         guildLinkId: guild.id,
         discordChannelId: '30',
@@ -114,7 +116,7 @@ test('settings authorize only destination managers or owner and validate bodies'
     const router = createGuildsRouter({
         linkService: {
             getGuildLinkById: (id) => guilds.findById(id),
-            setUserMentions: (...args) => guilds.setUserMentions(...args),
+            setMentionSetting: (...args) => guilds.setMentionSetting(...args),
         },
         webhookService: {},
         discordClient: {},
@@ -165,8 +167,8 @@ test('settings authorize only destination managers or owner and validate bodies'
     );
     const result = await request(router, 'GET', discord);
     assert.deepEqual(result.body, {
-        discord: { enabled: true, canManage: true },
-        fluxer: { enabled: false, canManage: false },
+        discord: { enabled: true, massEnabled: false, canManage: true },
+        fluxer: { enabled: false, massEnabled: false, canManage: false },
     });
     assert.equal(
         (
@@ -255,7 +257,7 @@ test('delivery rechecks mapping, destination toggle and channel access after ser
         );
         assert.deepEqual(result.users, []);
         assert.ok(result.content.includes('@\u200Bsource-name'));
-        await guilds.setUserMentions(guild.id, destination, false);
+        await guilds.setMentionSetting(guild.id, destination, false);
         result = await service.resolve(
             payload.content,
             payload.userMentions,
@@ -263,7 +265,7 @@ test('delivery rechecks mapping, destination toggle and channel access after ser
             canView
         );
         assert.deepEqual(result.users, []);
-        await guilds.setUserMentions(guild.id, destination, true);
+        await guilds.setMentionSetting(guild.id, destination, true);
         result = await service.resolve(
             payload.content,
             payload.userMentions,

@@ -63,22 +63,33 @@ export class WebhookService {
             data.userMentions,
             destination,
             (guildId, channelId, userId) =>
-                this.hasChannelAccess(
+                this.hasMentionPermission(
                     destination,
                     guildId,
                     channelId,
                     userId,
+                    false,
                     lookup
                 ),
-            allowPings
+            allowPings,
+            (platform, guildId, channelId, userId) =>
+                this.hasMentionPermission(
+                    platform,
+                    guildId,
+                    channelId,
+                    userId,
+                    true,
+                    lookup
+                )
         );
     }
 
-    private async hasChannelAccess(
+    private async hasMentionPermission(
         platform: MentionPlatform,
         guildId: string,
         channelId: string,
         userId: string,
+        mass: boolean,
         lookup: <T>(key: string, fetch: () => Promise<T>) => Promise<T>
     ): Promise<boolean> {
         try {
@@ -126,7 +137,11 @@ export class WebhookService {
                 )
                     return false;
                 const permissions = channel?.permissionsFor(member);
-                return !!permissions?.has(PermissionFlagsBits.ViewChannel);
+                return (
+                    !!permissions?.has(PermissionFlagsBits.ViewChannel) &&
+                    (!mass ||
+                        permissions.has(PermissionFlagsBits.MentionEveryone))
+                );
             }
             const guild = await lookup(`fluxer:guild:${guildId}`, () =>
                 this.fluxerClient!.guilds.fetch(guildId, { force: true })
@@ -155,7 +170,11 @@ export class WebhookService {
             )
                 return false;
             const permissions = member.permissionsIn(channel);
-            return permissions.has(FluxerPermissionFlags.ViewChannel);
+            return (
+                permissions.has(FluxerPermissionFlags.ViewChannel) &&
+                (!mass ||
+                    permissions.has(FluxerPermissionFlags.MentionEveryone))
+            );
         } catch {
             // Missing members and unavailable permissions must not enable notifications.
             return false;
@@ -237,7 +256,7 @@ export class WebhookService {
             const { id } = await webhook.send({
                 content: mentions.content,
                 allowedMentions: {
-                    parse: [],
+                    parse: mentions.everyone ? ['everyone'] : [],
                     users: mentions.users,
                     repliedUser: false,
                 },
@@ -273,7 +292,7 @@ export class WebhookService {
             await webhook.editMessage(messageId, {
                 content: mentions.content,
                 allowedMentions: {
-                    parse: [],
+                    parse: mentions.everyone ? ['everyone'] : [],
                     users: mentions.users,
                     repliedUser: false,
                 },
@@ -373,7 +392,7 @@ export class WebhookService {
                 {
                     content: mentions.content,
                     allowedMentions: {
-                        parse: [],
+                        parse: mentions.everyone ? ['everyone'] : [],
                         users: mentions.users,
                         repliedUser: false,
                     },
@@ -428,7 +447,7 @@ export class WebhookService {
                 body: {
                     content: mentions.content,
                     allowed_mentions: {
-                        parse: [],
+                        parse: mentions.everyone ? ['everyone'] : [],
                         users: mentions.users,
                         replied_user: false,
                     },

@@ -12,10 +12,11 @@ export function UserMentionSettings({
     return (
         <section className="flex flex-col gap-4">
             <div>
-                <h2 className="font-medium">Linked user mentions</h2>
+                <h2 className="font-medium">Incoming mentions</h2>
                 <p className="text-sm text-muted-foreground">
-                    Allow incoming tags to notify linked accounts in each
-                    server. Role, everyone, here, and automatic reply
+                    Control user and mass notifications separately for each
+                    server. Mass pings require the sender’s linked accounts to
+                    have permission in both channels. Role and automatic reply
                     notifications stay disabled.
                 </p>
             </div>
@@ -31,33 +32,47 @@ export function UserMentionSettings({
             )}
             {data &&
                 (['discord', 'fluxer'] as const).map((platform) => (
-                    <div
-                        key={platform}
-                        className="flex items-center justify-between gap-4"
-                    >
-                        <label htmlFor={`mentions-${platform}`}>
-                            Allow incoming linked-user pings on{' '}
+                    <div key={platform} className="flex flex-col gap-3">
+                        <h3 className="text-sm font-medium">
                             {platform === 'discord' ? 'Discord' : 'Fluxer'}
-                        </label>
-                        <Switch
-                            id={`mentions-${platform}`}
-                            checked={data[platform].enabled}
-                            disabled={
-                                !data[platform].canManage || update.isPending
-                            }
-                            onCheckedChange={(enabled) =>
-                                update.mutate(
-                                    { platform, enabled },
-                                    {
-                                        onError: (err) =>
-                                            toastManager.add({
-                                                title: 'Could not update mention settings',
-                                                description: err.message,
-                                            }),
+                        </h3>
+                        {(['user', 'mass'] as const).map((kind) => (
+                            <div
+                                key={kind}
+                                className="flex items-center justify-between gap-4"
+                            >
+                                <label htmlFor={`mentions-${platform}-${kind}`}>
+                                    {kind === 'user'
+                                        ? 'Allow incoming linked @user pings'
+                                        : 'Allow incoming @everyone and @here pings'}
+                                </label>
+                                <Switch
+                                    id={`mentions-${platform}-${kind}`}
+                                    checked={
+                                        kind === 'user'
+                                            ? data[platform].enabled
+                                            : data[platform].massEnabled
                                     }
-                                )
-                            }
-                        />
+                                    disabled={
+                                        !data[platform].canManage ||
+                                        update.isPending
+                                    }
+                                    onCheckedChange={(enabled) =>
+                                        update.mutate(
+                                            { platform, enabled, kind },
+                                            {
+                                                onError: (err) =>
+                                                    toastManager.add({
+                                                        title: 'Could not update mention settings',
+                                                        description:
+                                                            err.message,
+                                                    }),
+                                            }
+                                        )
+                                    }
+                                />
+                            </div>
+                        ))}
                     </div>
                 ))}
             <p className="text-sm text-muted-foreground">

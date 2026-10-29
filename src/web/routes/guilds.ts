@@ -334,19 +334,22 @@ export function createGuildsRouter({
         res.json({
             discord: {
                 enabled: link.discordUserMentions,
+                massEnabled: link.discordMassMentions,
                 canManage: canManageDiscord,
             },
             fluxer: {
                 enabled: link.fluxerUserMentions,
+                massEnabled: link.fluxerMassMentions,
                 canManage: canManageFluxer,
             },
         });
     });
     router.patch('/guild-links/:id/mentions', async (req, res) => {
-        const { platform, enabled } = req.body ?? {};
+        const { platform, enabled, kind = 'user' } = req.body ?? {};
         if (
             (platform !== 'discord' && platform !== 'fluxer') ||
-            typeof enabled !== 'boolean'
+            typeof enabled !== 'boolean' ||
+            (kind !== 'user' && kind !== 'mass')
         ) {
             res.status(400).json({
                 error: 'A destination platform and boolean enabled are required',
@@ -377,7 +380,7 @@ export function createGuildsRouter({
             });
             return;
         }
-        await linkService.setUserMentions(link.id, platform, enabled);
+        await linkService.setMentionSetting(link.id, platform, enabled, kind);
         res.status(204).end();
     });
 

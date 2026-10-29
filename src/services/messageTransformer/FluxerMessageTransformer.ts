@@ -1,4 +1,8 @@
-import { captureUserMention, UserMentionContext } from '../userMentions';
+import {
+    captureMassMentions,
+    captureUserMention,
+    UserMentionContext,
+} from '../userMentions';
 import { Message, MessageAttachmentFlags } from '@fluxerjs/core';
 import MessageTransformer from './MessageTransformer';
 import { WebhookMessageData } from '../WebhookService';
@@ -16,24 +20,29 @@ export default class FluxerMessageTransformer extends MessageTransformer<
         mentions?: UserMentionContext
     ): string {
         return breakMentions(
-            sanitizeMentions(message.content, {
-                resolveUser: (id) => {
-                    const user = message.client.users.get(id);
-                    const name = user ? user.username : null;
-                    return mentions
-                        ? captureUserMention(mentions, id, name)
-                        : name;
-                },
-                resolveRole: (id) => {
-                    if (!message.guild) return null;
-                    const role = message.guild.roles.get(id);
-                    return role ? role.name : null;
-                },
-                resolveChannel: (id) => {
-                    const channel = message.client.channels.get(id);
-                    return channel ? channel.name : null;
-                },
-            })
+            sanitizeMentions(
+                mentions
+                    ? captureMassMentions(message.content, mentions)
+                    : message.content,
+                {
+                    resolveUser: (id) => {
+                        const user = message.client.users.get(id);
+                        const name = user ? user.username : null;
+                        return mentions
+                            ? captureUserMention(mentions, id, name)
+                            : name;
+                    },
+                    resolveRole: (id) => {
+                        if (!message.guild) return null;
+                        const role = message.guild.roles.get(id);
+                        return role ? role.name : null;
+                    },
+                    resolveChannel: (id) => {
+                        const channel = message.client.channels.get(id);
+                        return channel ? channel.name : null;
+                    },
+                }
+            )
         );
     }
 
@@ -44,6 +53,7 @@ export default class FluxerMessageTransformer extends MessageTransformer<
         const userMentions: UserMentionContext = {
             platform: 'fluxer',
             channelId: message.channelId,
+            senderId: message.author.id,
             users: [],
         };
         const sanitizedContent = this.sanitizeContent(message, userMentions);

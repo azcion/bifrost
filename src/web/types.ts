@@ -137,6 +137,6 @@ export interface AccountLinkSummary {
 }
 
 export interface UserMentionSettings {
-    discord: { enabled: boolean; canManage: boolean };
-    fluxer: { enabled: boolean; canManage: boolean };
+    discord: { enabled: boolean; massEnabled: boolean; canManage: boolean };
+    fluxer: { enabled: boolean; massEnabled: boolean; canManage: boolean };
 }
