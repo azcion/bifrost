@@ -16,6 +16,12 @@
 
 ¹ Emoji support is limited to custom emojis from the linked Discord server and standard Unicode emojis. Emojis from the servers must have matching names to be replaced correctly.
 
+### Added in this fork
+
+- Manually link Discord and Fluxer accounts.
+- Sync emoji reactions across linked channels.
+- Mention linked users across platforms and relay `@everyone` and `@here` when permitted.
+
 ## Community
 
 Join out community Fluxer server for support, updates and to share your feedback: https://bifrost-bot.com/community/fluxer
