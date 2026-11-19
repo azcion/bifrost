@@ -1,4 +1,16 @@
+import { PermissionFlags } from '@fluxerjs/util';
+import { PermissionFlagsBits } from 'discord.js';
 import { FLUXER_BASE_URL } from './env';
+
+const BASE_BOT_PERMISSIONS = BigInt(536947712);
+export const DISCORD_BOT_PERMISSIONS = (
+    BASE_BOT_PERMISSIONS | PermissionFlagsBits.AddReactions
+).toString();
+export const FLUXER_BOT_PERMISSIONS = (
+    BASE_BOT_PERMISSIONS |
+    PermissionFlags.AddReactions |
+    PermissionFlags.UseExternalEmojis
+).toString();
 
 export const generateDiscordBotInviteLink = (
     clientId: string,

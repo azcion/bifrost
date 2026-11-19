@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { DISCORD_APP_ID, FLUXER_APP_ID } from '../../utils/env';
 import {
+    DISCORD_BOT_PERMISSIONS,
+    FLUXER_BOT_PERMISSIONS,
     generateDiscordBotInviteLink,
     generateFluxerBotInviteLink,
 } from '../../utils/generateBotInvite';
 import type { InviteLinkResponse } from '../types';
-
-const BOT_PERMISSIONS = '536947712';
 
 const router: Router = Router();
 
@@ -22,12 +22,12 @@ router.get('/invite-link', (req, res) => {
         platform === 'discord'
             ? generateDiscordBotInviteLink(
                   DISCORD_APP_ID,
-                  BOT_PERMISSIONS,
+                  DISCORD_BOT_PERMISSIONS,
                   guildIdParam
               )
             : generateFluxerBotInviteLink(
                   FLUXER_APP_ID,
-                  BOT_PERMISSIONS,
+                  FLUXER_BOT_PERMISSIONS,
                   guildIdParam
               );
 

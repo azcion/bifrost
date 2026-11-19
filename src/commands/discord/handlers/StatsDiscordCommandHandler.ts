@@ -13,6 +13,8 @@ import {
     REPO_URL,
 } from '../../../utils/env';
 import {
+    DISCORD_BOT_PERMISSIONS,
+    FLUXER_BOT_PERMISSIONS,
     generateDiscordBotInviteLink,
     generateFluxerBotInviteLink,
 } from '../../../utils/generateBotInvite';
@@ -49,8 +51,7 @@ export default class StatsDiscordCommandHandler extends DiscordCommandHandler {
         const usedHeap = getHeapUsageMB();
         const dbStats = await this.dbStatsService.getStats();
 
-        const perms = '536947712';
-        const inviteValue = `[Fluxer](${generateFluxerBotInviteLink(FLUXER_APP_ID, perms)}) | [Discord](${generateDiscordBotInviteLink(DISCORD_APP_ID, perms)})`;
+        const inviteValue = `[Fluxer](${generateFluxerBotInviteLink(FLUXER_APP_ID, FLUXER_BOT_PERMISSIONS)}) | [Discord](${generateDiscordBotInviteLink(DISCORD_APP_ID, DISCORD_BOT_PERMISSIONS)})`;
 
         const buildValue = GIT_COMMIT
             ? REPO_URL

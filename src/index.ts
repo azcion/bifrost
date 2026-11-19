@@ -1,3 +1,4 @@
+import ReactionSyncService from './services/reactionSync/ReactionSyncService';
 import { SequelizeAccountLinkRepository } from './db/sequelizerepos/SequelizeAccountLinkRepository';
 import { AccountLinkService } from './services/AccountLinkService';
 import { UserMentionService } from './services/userMentions';
@@ -34,6 +35,8 @@ import {
 } from './utils/env';
 import { createWebApp } from './web/app';
 import {
+    DISCORD_BOT_PERMISSIONS,
+    FLUXER_BOT_PERMISSIONS,
     generateDiscordBotInviteLink,
     generateFluxerBotInviteLink,
 } from './utils/generateBotInvite';
@@ -85,14 +88,20 @@ const main = async () => {
     const accountLinkService = new AccountLinkService(
         new SequelizeAccountLinkRepository()
     );
+    const discordEntityResolver = new DiscordEntityResolver();
+    const fluxerEntityResolver = new FluxerEntityResolver();
+    const reactionSyncService = new ReactionSyncService(
+        linkService,
+        accountLinkService,
+        discordEntityResolver,
+        fluxerEntityResolver
+    );
     const userMentionService = new UserMentionService(
         accountLinkService,
         cachedGuildLinkRepo,
         cachedChannelLinkRepo
     );
     const webhookService = new WebhookService(userMentionService);
-    const discordEntityResolver = new DiscordEntityResolver();
-    const fluxerEntityResolver = new FluxerEntityResolver();
     const discordStatsService = new DiscordStatsService();
     const fluxerStatsService = new FluxerStatsService();
     const dbStatsService = new DbStatsService(
@@ -106,6 +115,7 @@ const main = async () => {
 
     const fluxerArgs = {
         accountLinkService,
+        reactionSyncService,
         linkService,
         webhookService,
         healthCheckService,
@@ -190,15 +200,14 @@ const main = async () => {
         );
     });
 
-    const perms = '536947712';
     const discordBotInviteLink = generateDiscordBotInviteLink(
         DISCORD_APP_ID,
-        perms
+        DISCORD_BOT_PERMISSIONS
     );
     logger.info(`Discord Bot Invite Link: ${discordBotInviteLink}`);
     const fluxerBotInviteLink = generateFluxerBotInviteLink(
         FLUXER_APP_ID,
-        perms
+        FLUXER_BOT_PERMISSIONS
     );
     logger.info(`Fluxer Bot Invite Link: ${fluxerBotInviteLink}`);
 
@@ -214,6 +223,7 @@ const main = async () => {
     const [discordClient] = await Promise.all([
         startDiscordClient({
             accountLinkService,
+            reactionSyncService,
             linkService,
             webhookService,
             healthCheckService,

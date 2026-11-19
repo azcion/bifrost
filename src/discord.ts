@@ -1,3 +1,4 @@
+import ReactionSyncService from './services/reactionSync/ReactionSyncService';
 import { AccountLinkService } from './services/AccountLinkService';
 import {
     Client,
@@ -38,6 +39,7 @@ import { DbStatsService } from './services/DbStatsService';
 
 const startDiscordClient = async ({
     accountLinkService,
+    reactionSyncService,
     linkService,
     webhookService,
     healthCheckService,
@@ -50,6 +52,7 @@ const startDiscordClient = async ({
     dbStatsService,
 }: {
     accountLinkService: AccountLinkService;
+    reactionSyncService: ReactionSyncService;
     linkService: LinkService;
     webhookService: WebhookService;
     healthCheckService: HealthCheckService;
@@ -65,6 +68,7 @@ const startDiscordClient = async ({
         intents: [
             GatewayIntentBits.Guilds,
             GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.GuildMessageReactions,
             GatewayIntentBits.MessageContent,
         ],
         partials: [Partials.Message, Partials.Channel],
@@ -79,6 +83,7 @@ const startDiscordClient = async ({
         },
     });
 
+    reactionSyncService.setDiscordClient(client);
     webhookService.setDiscordClient(client);
     healthCheckService.setDiscordClient(client);
     discordEntityResolver.setDiscordClient(client);

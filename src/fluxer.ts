@@ -1,3 +1,4 @@
+import ReactionSyncService from './services/reactionSync/ReactionSyncService';
 import { AccountLinkService } from './services/AccountLinkService';
 import {
     Client,
@@ -49,6 +50,7 @@ import { DbStatsService } from './services/DbStatsService';
 
 const startFluxerClient = async ({
     accountLinkService,
+    reactionSyncService,
     linkService,
     webhookService,
     healthCheckService,
@@ -61,6 +63,7 @@ const startFluxerClient = async ({
     dbStatsService,
 }: {
     accountLinkService: AccountLinkService;
+    reactionSyncService: ReactionSyncService;
     linkService: LinkService;
     webhookService: WebhookService;
     healthCheckService: HealthCheckService;
@@ -99,6 +102,7 @@ const startFluxerClient = async ({
 
     console.log();
 
+    reactionSyncService.setFluxerClient(client);
     webhookService.setFluxerClient(client);
     healthCheckService.setFluxerClient(client);
     fluxerEntityResolver.setFluxerClient(client);
