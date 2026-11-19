@@ -52,8 +52,7 @@ export function AutolinkDialog({
                 <DialogHeader>
                     <DialogTitle>Autolink channels</DialogTitle>
                     <DialogDescription>
-                        Unlinked channels are matched by name. Review the
-                        proposed pairs before linking them.
+                        Match unlinked channels by name.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogPanel className="flex flex-col gap-4">

@@ -51,10 +51,6 @@ export function ReactionSyncSettings({ guildLinkId }: { guildLinkId: string }) {
                         />
                     </div>
                 ))}
-            <p className="text-sm text-muted-foreground">
-                Only the destination server’s managers or the instance owner can
-                change its setting.
-            </p>
         </section>
     );
 }

@@ -17,11 +17,6 @@ export function AccountPresentationSettings({
             <h2 className="text-lg font-semibold">
                 Linked account presentation
             </h2>
-            <p className="text-sm text-muted-foreground">
-                Use destination names and avatars from owner-managed account
-                links. Ownership is not verified. Changes apply to new messages,
-                not queued messages.
-            </p>
             {query.isPending ? (
                 <p>Loading settings…</p>
             ) : query.error ? (

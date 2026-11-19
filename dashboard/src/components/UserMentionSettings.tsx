@@ -11,15 +11,7 @@ export function UserMentionSettings({
     const update = useSetUserMentions(guildLinkId);
     return (
         <section className="flex flex-col gap-4">
-            <div>
-                <h2 className="font-medium">Incoming mentions</h2>
-                <p className="text-sm text-muted-foreground">
-                    Control user and mass notifications separately for each
-                    server. Mass pings require the sender’s linked accounts to
-                    have permission in both channels. Role and automatic reply
-                    notifications stay disabled.
-                </p>
-            </div>
+            <h2 className="font-medium">Incoming mentions</h2>
             {isLoading && (
                 <p className="text-sm text-muted-foreground">
                     Loading mention settings…
@@ -75,10 +67,6 @@ export function UserMentionSettings({
                         ))}
                     </div>
                 ))}
-            <p className="text-sm text-muted-foreground">
-                Only the destination server’s managers or the instance owner can
-                change its setting.
-            </p>
         </section>
     );
 }

@@ -18,7 +18,6 @@ import { Layout } from '../components/Layout';
 import {
     Empty,
     EmptyContent,
-    EmptyDescription,
     EmptyHeader,
     EmptyMedia,
     EmptyTitle,
@@ -97,10 +96,6 @@ export function GuildDetail() {
                             <PackageOpen />
                         </EmptyMedia>
                         <EmptyTitle>No bridged channels</EmptyTitle>
-                        <EmptyDescription>
-                            You haven't linked any Discord channels to Fluxer
-                            channels yet.
-                        </EmptyDescription>
                     </EmptyHeader>
                     <EmptyContent>
                         <div className="flex gap-2">

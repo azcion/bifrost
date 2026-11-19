@@ -52,11 +52,6 @@ export function AccountLinks() {
     return (
         <section className="flex flex-col gap-4 rounded-lg border p-4">
             <h2 className="text-lg font-semibold">Account links</h2>
-            <p className="text-sm text-muted-foreground">
-                Link accounts across this instance. Destination servers must
-                enable linked names and avatars. Account ownership is not
-                verified.
-            </p>
             {query.isPending ? (
                 <p>Loading account links…</p>
             ) : query.error ? (

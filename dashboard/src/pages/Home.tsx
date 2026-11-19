@@ -44,7 +44,6 @@ import { Layout } from '../components/Layout';
 import {
     Empty,
     EmptyContent,
-    EmptyDescription,
     EmptyHeader,
     EmptyMedia,
     EmptyTitle,
@@ -400,10 +399,6 @@ export function Home() {
                                     <PackageOpen />
                                 </EmptyMedia>
                                 <EmptyTitle>No bridged servers</EmptyTitle>
-                                <EmptyDescription>
-                                    You haven't linked any Discord servers to
-                                    Fluxer guilds yet.
-                                </EmptyDescription>
                             </EmptyHeader>
                             <EmptyContent>
                                 <div className="flex gap-2">
@@ -471,11 +466,9 @@ export function Home() {
                                                 these servers?
                                             </AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This will remove the bridge
-                                                between {pair.discord.name}
-                                                and {pair.fluxer.name}. And all
-                                                channel links between them will
-                                                be unlinked as well.
+                                                This removes all channel links
+                                                between {pair.discord.name} and{' '}
+                                                {pair.fluxer.name}.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
