@@ -72,6 +72,9 @@ test('migration upgrades existing pairs with independent disabled defaults', asy
     await guilds.setMentionSetting(guild.id, 'discord', true);
     const massMigration = require('../dist/db/migrations/00006-add-mass-mention-settings');
     await massMigration.up({ context });
+    await require('../dist/db/migrations/00007-add-reaction-sync-settings').up({
+        context,
+    });
     assert.equal((await guilds.findById(guild.id)).discordUserMentions, true);
     assert.equal((await guilds.findById(guild.id)).discordMassMentions, false);
     assert.equal((await guilds.findById(guild.id)).fluxerMassMentions, false);

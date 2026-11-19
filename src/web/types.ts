@@ -136,6 +136,11 @@ export interface AccountLinkSummary {
     fluxer: { username: string; avatarURL: string } | null;
 }
 
+export interface ReactionSyncSettings {
+    discord: { enabled: boolean; canManage: boolean };
+    fluxer: { enabled: boolean; canManage: boolean };
+}
+
 export interface UserMentionSettings {
     discord: { enabled: boolean; massEnabled: boolean; canManage: boolean };
     fluxer: { enabled: boolean; massEnabled: boolean; canManage: boolean };

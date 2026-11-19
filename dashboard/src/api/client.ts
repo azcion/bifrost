@@ -13,6 +13,7 @@ import type {
     GuildsResponse,
     InviteLinkResponse,
     MeResponse,
+    ReactionSyncSettings,
     UserMentionSettings,
 } from '../../../src/web/types';
 
@@ -213,6 +214,35 @@ export function useSetUserMentions(guildLinkId: string | undefined) {
         onSuccess: () =>
             queryClient.invalidateQueries({
                 queryKey: ['user-mentions', guildLinkId],
+            }),
+    });
+}
+
+export function useReactionSyncSettings(guildLinkId: string | undefined) {
+    return useQuery({
+        queryKey: ['reaction-sync', guildLinkId],
+        queryFn: () =>
+            apiFetch<ReactionSyncSettings>(
+                `/guild-links/${guildLinkId}/reactions`
+            ),
+        enabled: !!guildLinkId,
+    });
+}
+
+export function useSetReactionSync(guildLinkId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (body: {
+            platform: 'discord' | 'fluxer';
+            enabled: boolean;
+        }) =>
+            apiFetch<void>(`/guild-links/${guildLinkId}/reactions`, {
+                method: 'PATCH',
+                body: JSON.stringify(body),
+            }),
+        onSuccess: () =>
+            queryClient.invalidateQueries({
+                queryKey: ['reaction-sync', guildLinkId],
             }),
     });
 }

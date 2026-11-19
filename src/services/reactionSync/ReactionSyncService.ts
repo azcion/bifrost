@@ -140,7 +140,12 @@ export default class ReactionSyncService {
             this.links.getChannelLinkById(link.channelLinkId),
             this.links.getGuildLinkById(link.guildLinkId),
         ]);
-        if (!channel || !guild) return;
+        if (
+            !channel ||
+            !guild ||
+            (!guild.discordReactionSync && !guild.fluxerReactionSync)
+        )
+            return;
 
         const [discordMessage, fluxerMessage] = await Promise.all([
             fetchDiscordReactionMessage(
@@ -187,13 +192,18 @@ export default class ReactionSyncService {
             return lookup;
         };
 
+        const current = await this.links.getGuildLinkById(guild.id);
         const results = await Promise.allSettled([
-            reconcileReactions(discordMessage, fluxerMessage, (id) =>
-                counterpart('discord', id)
-            ),
-            reconcileReactions(fluxerMessage, discordMessage, (id) =>
-                counterpart('fluxer', id)
-            ),
+            current?.fluxerReactionSync
+                ? reconcileReactions(discordMessage, fluxerMessage, (id) =>
+                      counterpart('discord', id)
+                  )
+                : undefined,
+            current?.discordReactionSync
+                ? reconcileReactions(fluxerMessage, discordMessage, (id) =>
+                      counterpart('fluxer', id)
+                  )
+                : undefined,
         ]);
         for (const result of results) {
             if (result.status === 'rejected') {

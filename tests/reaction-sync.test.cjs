@@ -132,7 +132,18 @@ Object.assign(process.env, {
     BF_CONFIG_PATH: fixture,
     BF_DISCORD_TOKEN: 'test',
     BF_FLUXER_TOKEN: 'test',
+    BF_DISCORD_OWNER_ID: 'owner',
+    BF_DB_DIALECT:
+        process.env.ACCOUNT_LINK_TEST_POSTGRES === '1' ? 'postgres' : 'sqlite',
 });
+if (process.env.ACCOUNT_LINK_TEST_POSTGRES === '1')
+    Object.assign(process.env, {
+        BF_DB_HOST: '127.0.0.1',
+        BF_DB_PORT: '55439',
+        BF_DB_NAME: 'bifrost_reactions_test',
+        BF_DB_USER: 'postgres',
+        BF_DB_PASS: 'test-only',
+    });
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 test(
@@ -146,6 +157,11 @@ test(
         const fluxerUsers = new Set();
         let discordOwn = false;
         let fluxerOwn = false;
+        const guild = {
+            id: 'guild',
+            discordReactionSync: false,
+            fluxerReactionSync: true,
+        };
 
         const discord = {
             ws: new EventEmitter(),
@@ -237,7 +253,7 @@ test(
                 getMessageLinkByFluxerMessageId: async (id) =>
                     id === pair.fluxerMessageId ? pair : null,
                 getChannelLinkById: async () => ({}),
-                getGuildLinkById: async () => ({}),
+                getGuildLinkById: async () => guild,
             },
             {
                 counterpart: async (_, id) =>
@@ -266,13 +282,25 @@ test(
         });
         await write;
 
-        write = once(writes, 'discord-add');
         discordUsers.clear();
-        discord.ws.emit(GatewayDispatchEvents.MessageReactionRemove, {
+        const discordRemove = {
             guild_id: 'guild',
             user_id: 'tooth',
             message_id: pair.discordMessageId,
-        });
+        };
+        discord.ws.emit(
+            GatewayDispatchEvents.MessageReactionRemove,
+            discordRemove
+        );
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        assert.equal(discordOwn, false);
+
+        guild.discordReactionSync = true;
+        write = once(writes, 'discord-add');
+        discord.ws.emit(
+            GatewayDispatchEvents.MessageReactionRemove,
+            discordRemove
+        );
         await write;
 
         write = once(writes, 'discord-remove');
@@ -283,3 +311,143 @@ test(
         await write;
     }
 );
+
+test('reaction settings default off, persist independently and require destination permission', async () => {
+    const sequelize = require('../dist/db/sequelize').default;
+    const migrator = require('../dist/db/migrator').default;
+    const {
+        SequelizeGuildLinkRepository,
+    } = require('../dist/db/sequelizerepos/SequelizeGuildLinkRepository');
+    const {
+        CachedGuildLinkRepository,
+    } = require('../dist/db/cachedrepos/CachedGuildLinkRepository');
+    const { LinkService } = require('../dist/services/LinkService');
+    const { createGuildsRouter } = require('../dist/web/routes/guilds');
+    const id = '00000000-0000-4000-8000-000000000007';
+    const repository = new CachedGuildLinkRepository(
+        new SequelizeGuildLinkRepository(),
+        60
+    );
+    const router = createGuildsRouter({
+        linkService: new LinkService(repository),
+        fluxerClientRef: {},
+    });
+    const request = (method, session, body) =>
+        new Promise((resolve, reject) =>
+            router.handle(
+                {
+                    method,
+                    url: `/guild-links/${id}/reactions`,
+                    session,
+                    body,
+                    headers: {},
+                },
+                {
+                    statusCode: 200,
+                    status(code) {
+                        this.statusCode = code;
+                        return this;
+                    },
+                    json(body) {
+                        resolve({ status: this.statusCode, body });
+                    },
+                    end() {
+                        resolve({ status: this.statusCode });
+                    },
+                },
+                reject
+            )
+        );
+
+    try {
+        await migrator.up({ to: '00006-add-mass-mention-settings.js' });
+        await sequelize.getQueryInterface().bulkInsert('guild_links', [
+            {
+                id,
+                discordGuildId: '10',
+                fluxerGuildId: '20',
+                createdAt: new Date(),
+            },
+        ]);
+        await migrator.up();
+        const manager = {
+            discord: {
+                id: 'manager',
+                guilds: [{ id: '10', permissions: '32' }],
+            },
+        };
+        const owner = { discord: { id: 'owner' } };
+        assert.equal((await request('GET', {})).status, 403);
+        assert.deepEqual((await request('GET', manager)).body, {
+            discord: { enabled: false, canManage: true },
+            fluxer: { enabled: false, canManage: false },
+        });
+        assert.equal(
+            (
+                await request('PATCH', manager, {
+                    platform: 'fluxer',
+                    enabled: true,
+                })
+            ).status,
+            403
+        );
+        assert.equal(
+            (
+                await request('PATCH', manager, {
+                    platform: 'discord',
+                    enabled: 'yes',
+                })
+            ).status,
+            400
+        );
+        assert.equal(
+            (
+                await request('PATCH', manager, {
+                    platform: 'discord',
+                    enabled: true,
+                })
+            ).status,
+            204
+        );
+        assert.equal(
+            (await repository.findByDiscordGuildId('10')).discordReactionSync,
+            true
+        );
+        assert.equal(
+            (await repository.findByFluxerGuildId('20')).fluxerReactionSync,
+            false
+        );
+        assert.equal(
+            (
+                await request('PATCH', owner, {
+                    platform: 'fluxer',
+                    enabled: true,
+                })
+            ).status,
+            204
+        );
+        assert.equal(
+            (
+                await request('PATCH', manager, {
+                    platform: 'discord',
+                    enabled: false,
+                })
+            ).status,
+            204
+        );
+        const settings = (await request('GET', owner)).body;
+        assert.equal(settings.discord.enabled, false);
+        assert.equal(settings.fluxer.enabled, true);
+
+        await migrator.down();
+        await migrator.up();
+        const fresh = await new SequelizeGuildLinkRepository().create(
+            '30',
+            '40'
+        );
+        assert.equal(fresh.discordReactionSync, false);
+        assert.equal(fresh.fluxerReactionSync, false);
+    } finally {
+        await sequelize.close();
+    }
+});

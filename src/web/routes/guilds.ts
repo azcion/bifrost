@@ -384,5 +384,81 @@ export function createGuildsRouter({
         res.status(204).end();
     });
 
+    router.get('/guild-links/:id/reactions', async (req, res) => {
+        const link = await linkService.getGuildLinkById(req.params.id);
+        if (!link) {
+            res.status(404).json({ error: 'Guild link not found' });
+            return;
+        }
+        const canManageDiscord =
+            isOwner(req) ||
+            hasDiscordGuildPermission(
+                req,
+                link.discordGuildId,
+                DiscordManageGuild
+            );
+        const canManageFluxer =
+            isOwner(req) ||
+            hasFluxerGuildPermission(
+                req,
+                link.fluxerGuildId,
+                FluxerManageGuild
+            );
+        if (!canManageDiscord && !canManageFluxer) {
+            res.status(403).json({
+                error: 'You do not manage either linked guild',
+            });
+            return;
+        }
+        res.json({
+            discord: {
+                enabled: link.discordReactionSync,
+                canManage: canManageDiscord,
+            },
+            fluxer: {
+                enabled: link.fluxerReactionSync,
+                canManage: canManageFluxer,
+            },
+        });
+    });
+    router.patch('/guild-links/:id/reactions', async (req, res) => {
+        const { platform, enabled } = req.body ?? {};
+        if (
+            (platform !== 'discord' && platform !== 'fluxer') ||
+            typeof enabled !== 'boolean'
+        ) {
+            res.status(400).json({
+                error: 'A destination platform and boolean enabled are required',
+            });
+            return;
+        }
+        const link = await linkService.getGuildLinkById(req.params.id);
+        if (!link) {
+            res.status(404).json({ error: 'Guild link not found' });
+            return;
+        }
+        const canManage =
+            isOwner(req) ||
+            (platform === 'discord'
+                ? hasDiscordGuildPermission(
+                      req,
+                      link.discordGuildId,
+                      DiscordManageGuild
+                  )
+                : hasFluxerGuildPermission(
+                      req,
+                      link.fluxerGuildId,
+                      FluxerManageGuild
+                  ));
+        if (!canManage) {
+            res.status(403).json({
+                error: 'You do not manage the destination server',
+            });
+            return;
+        }
+        await linkService.setReactionSync(link.id, platform, enabled);
+        res.status(204).end();
+    });
+
     return router;
 }

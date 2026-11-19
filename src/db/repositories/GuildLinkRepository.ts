@@ -17,6 +17,12 @@ export interface GuildLinkRepository {
         enabled: boolean
     ): Promise<void>;
 
+    setReactionSync(
+        id: string,
+        platform: 'discord' | 'fluxer',
+        enabled: boolean
+    ): Promise<void>;
+
     setMentionSetting(
         id: string,
         platform: 'discord' | 'fluxer',

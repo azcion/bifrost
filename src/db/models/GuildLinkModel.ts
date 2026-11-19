@@ -39,6 +39,16 @@ GuildLinkModel.init(
             allowNull: false,
             defaultValue: false,
         },
+        discordReactionSync: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
+        fluxerReactionSync: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
         discordGuildId: {
             type: DataTypes.STRING,
             unique: true,

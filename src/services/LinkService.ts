@@ -9,6 +9,14 @@ export class LinkService {
         private messageRepo: MessageLinkRepository
     ) {}
 
+    async setReactionSync(
+        id: string,
+        platform: 'discord' | 'fluxer',
+        enabled: boolean
+    ): Promise<void> {
+        await this.guildRepo.setReactionSync(id, platform, enabled);
+    }
+
     async setMentionSetting(
         id: string,
         platform: 'discord' | 'fluxer',

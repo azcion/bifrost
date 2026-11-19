@@ -1,3 +1,4 @@
+import { ReactionSyncSettings } from '../components/ReactionSyncSettings';
 import { UserMentionSettings } from '../components/UserMentionSettings';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, PackageOpen, Trash } from 'lucide-react';
@@ -60,6 +61,7 @@ export function GuildDetail() {
                 <>
                     <AccountPresentationSettings guildLinkId={guildLinkId} />
                     <UserMentionSettings guildLinkId={guildLinkId} />
+                    <ReactionSyncSettings guildLinkId={guildLinkId} />
                 </>
             )}
 

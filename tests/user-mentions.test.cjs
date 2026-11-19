@@ -61,6 +61,9 @@ test('migration upgrades existing pairs with independent disabled defaults', asy
     ]);
     const massMigration = require('../dist/db/migrations/00006-add-mass-mention-settings');
     await massMigration.up({ context });
+    await require('../dist/db/migrations/00007-add-reaction-sync-settings').up({
+        context,
+    });
     const migration = require('../dist/db/migrations/00005-add-user-mention-settings');
     await migration.up({ context });
     guild = { id: '00000000-0000-4000-8000-000000000001' };

@@ -8,5 +8,7 @@ export interface GuildLink {
     fluxerUserMentions: boolean;
     discordMassMentions: boolean;
     fluxerMassMentions: boolean;
+    discordReactionSync: boolean;
+    fluxerReactionSync: boolean;
     createdAt: Date;
 }
