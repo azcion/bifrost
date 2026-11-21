@@ -46,6 +46,7 @@ function toWebhookMessageData(
 
 export default class MessageQueueService {
     private drainInterval: ReturnType<typeof setInterval> | null = null;
+    private draining = false;
 
     constructor(private readonly ttlMs: number) {}
 
@@ -67,6 +68,20 @@ export default class MessageQueueService {
     }
 
     async drain(
+        webhookService: WebhookService,
+        linkService: LinkService
+    ): Promise<void> {
+        if (this.draining) return;
+
+        this.draining = true;
+        try {
+            await this.drainPending(webhookService, linkService);
+        } finally {
+            this.draining = false;
+        }
+    }
+
+    private async drainPending(
         webhookService: WebhookService,
         linkService: LinkService
     ): Promise<void> {
@@ -156,12 +171,13 @@ export default class MessageQueueService {
                 );
             } catch (err) {
                 if (isFluxerApiBlockError(err)) markFluxerApiBlocked();
+                const attempt = entry.retryCount + 1;
                 await entry.update({
-                    retryCount: entry.retryCount + 1,
+                    retryCount: attempt,
                     lastError: String(err),
                 });
                 logger.warn(
-                    `Queue drain: retry failed for entry ${entry.id} (attempt ${entry.retryCount + 1}): ${err}`
+                    `Queue drain: retry failed for entry ${entry.id} (attempt ${attempt}): ${err}`
                 );
             }
         }

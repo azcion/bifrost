@@ -19,6 +19,9 @@ import { GeneralEmoji } from '../../utils/emojis';
 
 type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean>>;
 
+// The pinned discord.js version only checks the legacy filename prefix.
+const DISCORD_ATTACHMENT_SPOILER_FLAG = 1 << 3;
+
 export default class DiscordMessageTransformer extends MessageTransformer<
     DiscordMessage,
     WebhookMessageData
@@ -45,7 +48,9 @@ export default class DiscordMessageTransformer extends MessageTransformer<
             source.attachments?.map((attachment) => ({
                 url: attachment.url,
                 name: attachment.name || 'attachment',
-                spoiler: attachment.spoiler,
+                spoiler:
+                    attachment.spoiler ||
+                    attachment.flags.has(DISCORD_ATTACHMENT_SPOILER_FLAG),
             })) ?? [];
 
         source.stickers?.forEach((sticker) => {

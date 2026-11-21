@@ -9,11 +9,13 @@ import {
 import {
     AttachmentBuilder,
     Client as DiscordClient,
+    MessagePayload,
     TextChannel as DiscordTextChannel,
     WebhookClient,
     PermissionFlagsBits,
     Routes as DiscordRoutes,
     type RESTGetAPIGuildMemberResult,
+    type WebhookMessageCreateOptions,
 } from 'discord.js';
 import logger from '../utils/logging/logger';
 import WebhookEmbed from './WebhookEmbed';
@@ -243,6 +245,8 @@ export class WebhookService {
         webhook: DiscordWebhook,
         data: WebhookMessageData
     ): Promise<{ messageId: string }> {
+        let stage = 'preparing the payload';
+        let stageStarted = performance.now();
         try {
             const mentions = await this.prepareMentions(data, 'discord', true);
             const files = data.attachments?.map((att) => {
@@ -253,7 +257,7 @@ export class WebhookService {
                 return attBuilder;
             });
 
-            const { id } = await webhook.send({
+            const options: WebhookMessageCreateOptions = {
                 content: mentions.content,
                 allowedMentions: {
                     parse: mentions.everyone ? ['everyone'] : [],
@@ -265,11 +269,27 @@ export class WebhookService {
                 files,
                 embeds:
                     data.embeds?.map((embed) => embed.toDiscordEmbed()) || [],
-            });
+            };
+            let payload: WebhookMessageCreateOptions | MessagePayload = options;
+            if (files?.length) {
+                stage = 'downloading attachments';
+                stageStarted = performance.now();
+                payload = await MessagePayload.create(webhook, options)
+                    .resolveBody()
+                    .resolveFiles();
+            }
+
+            stage = 'sending the webhook request';
+            stageStarted = performance.now();
+            const { id } = await webhook.send(payload);
 
             return { messageId: id };
         } catch (error: unknown) {
-            logger.error('Error sending message via Discord webhook:', error);
+            const elapsed = Math.round(performance.now() - stageStarted);
+            logger.error(
+                `Error sending message via Discord webhook while ${stage} after ${elapsed}ms:`,
+                error
+            );
             throw error;
         }
     }
